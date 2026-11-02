@@ -1,0 +1,304 @@
+
+const express = require('express');
+const app = express();
+
+app.use(express.json());
+const users = [];
+const profiles = [];
+const qualifications=[];
+let logs = [];
+
+
+app.get('/', (req, res) => {
+    res.send('Welcome to Login and Signup Page');
+});
+
+
+app.get('/signup', (req, res) => {
+    let { name, email, password, reenterpassword, gender, mobile, address } = req.query;
+
+    if (!name || !email || !password || !reenterpassword ||
+        !gender || !mobile || !address) {
+        return res.status(400).send('All fields are required');
+    }
+
+    if (name.trim().length < 3 || name.trim().length > 30) {
+        return res.status(400).send('Name must be between 3 and 30 characters');
+    }
+
+    
+    if (!email.includes('@') || !email.includes('.')) {
+        return res.status(400).send('Invalid email');
+    }
+
+    email = email.toLowerCase().trim();
+
+   
+    if (password.length < 8) {
+        return res.status(400).send('Password must contain at least 8 characters');
+    }
+
+    if (password !== reenterpassword) {
+        return res.status(400).send('Passwords do not match');
+    }
+
+  
+    if (gender !== 'Male' && gender !== 'Female' && gender !== 'Other') {
+        return res.status(400).send('Invalid gender');
+    }
+
+     if (mobile.length !== 10 || isNaN(mobile)) {
+        return res.status(400).send('Mobile number must contain 10 digits');
+    }
+
+    
+    if (address.trim().length < 5) {
+        return res.status(400).send('Enter a valid address');
+    }
+
+    
+    let existingUser = users.find(user => user.email === email);
+
+    if (existingUser) {
+        return res.status(400).send('Email already registered');
+    }
+
+        let newUser = {
+        id: users.length + 1,
+        name,
+        email,
+        password,
+        gender,
+        mobile,
+        address
+    };
+
+    users.push(newUser);
+
+    res.send({
+        message: 'Signup successful',
+        user: newUser
+    });
+});
+
+app.get('/login', (req, res) => {
+    let { email, password } = req.query;
+
+    if (!email || !password) {
+        return res.status(400).send('Email and password are required');
+    }
+
+    email = email.toLowerCase().trim();
+
+    let user = users.find(user =>
+        user.email === email && user.password === password
+    );
+
+    if (!user) {
+        return res.status(401).send('Invalid email or password');
+    }
+
+    res.send({
+        message: 'Login successful',
+        user: {
+            id: user.id,
+            name: user.name,
+            email: user.email
+        }
+    });
+});
+
+app.get('/create-profile', (req, res) => {
+    let { email, qualification, skills } = req.query;
+
+    if (!email || !qualification || !skills) {
+        return res.status(400).send('All fields are required');
+    }
+
+    email = email.toLowerCase().trim();
+
+    let user = users.find(user => user.email === email);
+
+    if (!user) {
+        return res.status(404).send('User not found');
+    }
+
+    let existingProfile = profiles.find(
+        profile => profile.userId === user.id
+    );
+
+    if (existingProfile) {
+        return res.status(400).send('Profile already exists');
+    }
+
+    let newProfile = {
+        id: profiles.length + 1,
+         userId: user.id,
+        qualification,
+        skills: skills.split(',').map(skill => skill.trim())
+    };
+
+    profiles.push(newProfile);
+
+    res.send({
+        message: 'Profile created successfully',
+        profile: newProfile
+    });
+});
+
+app.get('/profile', (req, res) => {
+    let { email } = req.query;
+
+    if (!email) {
+        return res.status(400).send('Email is required');
+    }
+
+    email = email.toLowerCase().trim();
+
+    let user = users.find(user => user.email === email);
+
+    if (!user) {
+        return res.status(404).send('User not found');
+    }
+
+    let profile = profiles.find(
+        profile => profile.userId === user.id
+    );
+
+    if (!profile) {
+        return res.status(404).send('Profile not found');
+    }
+
+    res.send({
+        user: {
+            name: user.name,
+            email: user.email
+        },
+        profile
+    });
+});
+
+
+app.get('/delete-profile', (req, res) => {
+    let { email } = req.query;
+
+    if (!email) {
+        return res.status(400).send('Email is required');
+    }
+
+    email = email.toLowerCase().trim();
+
+    let user = users.find(user => user.email === email);
+
+    if (!user) {
+        return res.status(404).send('User not found');
+    }
+
+    let profileIndex = profiles.findIndex(
+        profile => profile.userId === user.id
+    );
+
+    if (profileIndex === -1) {
+        return res.status(404).send('Profile not found');
+    }
+
+    profiles.splice(profileIndex, 1);
+
+    res.send('Profile deleted successfully');
+});
+
+app.get('/application', (req, res) => {
+    let { email, company, position } = req.query;
+
+    if (!email || !company || !position) {
+        return res.status(400).send('All fields are required');
+    }
+
+    email = email.toLowerCase().trim();
+
+    let user = users.find(user => user.email === email);
+
+    if (!user) {
+        return res.status(404).send('User not found');
+    }
+
+    let profile = profiles.find(
+        profile => profile.userId === user.id
+    );
+
+    if (!profile) {
+        return res.status(400).send('Please create your profile first');
+    }
+
+    let newApplication = {
+        id: applications.length + 1,
+        userId: user.id,
+        company,
+        position,
+        status: 'Applied',
+        appliedAt: new Date()
+    };
+
+    applications.push(newApplication);
+
+    res.send({
+        message: 'Application submitted successfully',
+        application: newApplication
+    });
+});
+
+app.get('/withdraw-application', (req, res) => {
+    let { email, applicationId } = req.query;
+
+    if (!email || !applicationId) {
+        return res.status(400).send('Email and application ID are required');
+    }
+
+    email = email.toLowerCase().trim();
+
+    let user = users.find(user => user.email === email);
+
+    if (!user) {
+        return res.status(404).send('User not found');
+    }
+
+    let application = applications.find(
+        application =>
+            application.id === Number(applicationId) &&
+            application.userId === user.id
+    );
+
+    if (!application) {
+        return res.status(404).send('Application not found');
+    }
+
+    if (application.status === 'Withdrawn') {
+        return res.status(400).send('Application already withdrawn');
+    }
+
+    application.status = 'Withdrawn';
+
+    res.send({
+        message: 'Application withdrawn successfully',
+        application
+    });
+});
+
+app.get('/health', (req, res) => {
+    res.send({
+        message: 'Server is healthy',
+        status: 'Running',
+        time: new Date()
+    });
+});
+
+app.get('/logs', (req, res) => {
+    res.send({
+        message: 'Server logs',
+        logs: logs
+    });
+});
+
+app.listen(1001, () => {
+    console.log('Server is running on http://localhost:1001');
+});
